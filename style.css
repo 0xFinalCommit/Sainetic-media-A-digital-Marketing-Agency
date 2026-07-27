@@ -402,7 +402,7 @@ h1 {
   line-height: .9;
   letter-spacing: -.07em;
   margin: 28px 0 32px;
-  font-weight: 460;
+  font-weight: 520;
   max-width: 900px;
 }
 
@@ -416,14 +416,15 @@ em {
 .proximity-word,
 .proximity-target {
   display: inline-block;
-  transform: translateZ(0) scale(var(--proximity-scale, 1));
-  transition: transform var(--motion-fast) var(--ease-soft), color .24s var(--ease-out), text-shadow .24s var(--ease-out)
+  transform: none;
+  transition: none;
+  text-shadow: none;
 }
 
 .proximity-word.is-near,
 .proximity-target.is-near {
-  color: var(--sage);
-  text-shadow: 0 0 calc(var(--proximity-glow, 0) * 14px) rgba(156, 176, 128, .32)
+  color: inherit;
+  text-shadow: none;
 }
 
 .eyebrow.proximity-target,
@@ -436,7 +437,7 @@ em {
 }
 
 em .proximity-word.is-near {
-  color: var(--white)
+  color: inherit
 }
 
 .rotating-word {
@@ -445,15 +446,15 @@ em .proximity-word.is-near {
 
 .vp-heading .vp-char {
   display: inline-block;
-  transform: translate3d(0, 0, 0) scaleX(var(--vp-x, 1));
+  transform: none;
   transform-origin: center bottom;
-  transition: transform .2s var(--ease-soft), text-shadow .2s var(--ease-soft);
-  will-change: transform;
+  transition: none;
+  will-change: auto;
   backface-visibility: hidden
 }
 
 .vp-heading .vp-char.is-near {
-  text-shadow: .015em 0 0 currentColor, -.015em 0 0 currentColor, 0 0 10px rgba(156, 176, 128, .12)
+  text-shadow: none
 }
 
 .scramble-ready {

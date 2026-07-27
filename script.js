@@ -18,14 +18,101 @@ const pricingData = {
   }
 };
 
+const portfolioProjects = {
+  websiteProjects: {
+    title: "Brands We've Transformed",
+    description: "A premium website system built to make the brand feel calm, credible, and conversion ready.",
+    mode: "website",
+    actionLabel: "Build something like this",
+    actionHref: "#contact",
+    collage: [
+      { number: "01", title: "White coat devices", image: "image/Saineticmedia1.webp", href: "https://whitecoatdevice.in/" },
+      { number: "02", title: "Globrient", image: "image/Saineticmedia2.webp", href: "https://globriant.com/" },
+      { number: "03", title: "Wealthvisory Capital", image: "image/Saineticmedia3.webp", href: "https://wealthvisorycapital.com/" },
+      { number: "04", title: "Oneplixs", image: "image/Saineticmedia4.webp", href: "https://oneplixs.com/" },
+      { number: "05", title: "Brand assets", image: "image/Saineticmedia5.webp", href: "https://replace-with-brand-assets-link.com" },
+      { number: "06", title: "Make Of Welding", image: "image/Saineticmedia6.webp", href: "https://makeofwelding.com/" }
+    ]
+  },
+  graphicDesign: {
+    title: "Graphic Design Portfolio",
+    description: "Download the graphic design portfolio PDF.",
+    mode: "asset",
+    actionLabel: "Download Graphic Design Portfolio",
+    actionHref: "download/graphic-portfolio.pdf",
+    actionType: "download"
+  },
+  videoEditing: {
+    title: "Video Editing Portfolio",
+    description: "Open the video editing portfolio folder on Google Drive.",
+    mode: "asset",
+    actionLabel: "Open Video Editing Portfolio",
+    actionHref: "https://drive.google.com/drive/folders/1uN-a_so5cIjxjc1zOAn-cqtPvlmb6alJ?usp=sharing",
+    actionType: "link"
+  },
+  metaAds: {
+    title: "Meta Ads Portfolio",
+    description: "Download the Meta Ads portfolio PDF.",
+    mode: "asset",
+    actionLabel: "Download Meta Ads Portfolio",
+    actionHref: "download/Meta_Ads_Report.pdf",
+    actionType: "download"
+  }
+};
+const whatsappNumber = "917878063531";
+const whatsappMessages = {
+  services: {
+    web: "Hi Sainetic Media, I am interested in Web Design for my business. Please share pricing, timeline, and next steps.",
+    graphic: "Hi Sainetic Media, I am interested in Graphic Design for my business. Please share pricing, timeline, and next steps.",
+    video: "Hi Sainetic Media, I am interested in Video Editing for my business. Please share pricing, timeline, and next steps.",
+    ads: "Hi Sainetic Media, I am interested in Meta Ads for my business. Please share pricing, timeline, and next steps."
+  },
+  pricing: {
+    oneTime: {
+      starter: "Hi Sainetic Media, I am interested in your Starter one-time project plan. Please share scope, pricing, and next steps.",
+      growth: "Hi Sainetic Media, I am interested in your Growth one-time project plan. Please share scope, pricing, and next steps.",
+      premium: "Hi Sainetic Media, I am interested in your Premium one-time project plan. Please share scope, pricing, and next steps."
+    },
+    monthly: {
+      starter: "Hi Sainetic Media, I am interested in your Starter monthly partner plan. Please share scope, pricing, and next steps.",
+      growth: "Hi Sainetic Media, I am interested in your Growth monthly partner plan. Please share scope, pricing, and next steps.",
+      premium: "Hi Sainetic Media, I am interested in your Premium monthly partner plan. Please share scope, pricing, and next steps."
+    }
+  },
+  websiteProject: "Hi Sainetic Media, I want a website like the portfolio you showed me. Please share pricing, timeline, and next steps."
+};
+const toWhatsAppLink = message => `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+const wireWhatsAppLinks = (root = document) => {
+  qsa("[data-wa-message]", root).forEach(link => {
+    link.href = toWhatsAppLink(link.dataset.waMessage);
+    link.target = "_blank";
+    link.rel = "noreferrer noopener";
+  });
+};
+
 const qs = (selector, parent = document) => parent.querySelector(selector);
 const qsa = (selector, parent = document) => [...parent.querySelectorAll(selector)];
 const setTranslateVars = (element, x, y) => {
   element.style.setProperty("--magnetic-x", `${x}px`);
   element.style.setProperty("--magnetic-y", `${y}px`);
 };
+const scheduleDeferred = callback => {
+  if ("requestIdleCallback" in window) {
+    window.requestIdleCallback(() => callback(), { timeout: 900 });
+    return;
+  }
+  window.setTimeout(callback, 240);
+};
 
-window.addEventListener("load", () => window.setTimeout(() => qs(".page-loader")?.classList.add("loaded"), 350));
+window.addEventListener("load", () => {
+  window.setTimeout(() => qs(".page-loader")?.classList.add("loaded"), 350);
+  wireWhatsAppLinks();
+  scheduleDeferred(() => {
+    initScrambleEffects();
+    initCounterAnimations();
+    initTestimonialRotation();
+  });
+}, { once: true });
 
 const themeToggle = qs(".theme-toggle");
 const themeColor = qs('meta[name="theme-color"]');
@@ -77,6 +164,7 @@ const subscribeScroll = callback => {
 };
 qsa(".section-tag, .eyebrow, .card-index, .service-icon, .text-link").forEach(element => element.classList.add("proximity-target"));
 const proximityTargets = qsa(".proximity-word, .proximity-target");
+const proximityHeadings = qsa("h1, .section-heading h2, .statement, .contact h2, .testimonial p");
 const activeProximityTargets = new Set();
 const proximityTargetCenters = new WeakMap();
 let activeHeading = null;
@@ -88,6 +176,7 @@ let pointerY = 0;
 let smoothX = 0;
 let smoothY = 0;
 let pointerReady = false;
+let pointerDecorationsReady = false;
 let proximityMeasurementsDirty = true;
 const wrapHeadingLetters = heading => {
   const wrapNode = node => {
@@ -110,8 +199,13 @@ const wrapHeadingLetters = heading => {
   heading.classList.add("vp-heading");
   wrapNode(heading);
 };
-qsa("h1, .section-heading h2, .statement, .contact h2, .testimonial p").forEach(wrapHeadingLetters);
+const ensureHeadingWrapped = heading => {
+  if (heading.dataset.vpWrapped === "true") return;
+  wrapHeadingLetters(heading);
+  heading.dataset.vpWrapped = "true";
+};
 const cacheHeadingCenters = heading => {
+  ensureHeadingWrapped(heading);
   activeHeading = heading;
   activeHeadingChars = qsa(".vp-char", heading);
   activeHeadingCenters = activeHeadingChars.map(char => {
@@ -131,7 +225,9 @@ const refreshProximityMeasurements = () => {
 const markProximityMeasurementsDirty = () => {
   proximityMeasurementsDirty = true;
 };
-qsa(".vp-heading").forEach(heading => {
+const bindHeadingProximity = heading => {
+  if (heading.dataset.vpBound === "true") return;
+  heading.dataset.vpBound = "true";
   heading.addEventListener("pointerenter", () => cacheHeadingCenters(heading), { passive: true });
   heading.addEventListener("pointerleave", () => {
     activeHeadingChars.forEach(char => {
@@ -142,7 +238,7 @@ qsa(".vp-heading").forEach(heading => {
     activeHeadingChars = [];
     activeHeadingCenters = [];
   }, { passive: true });
-});
+};
 const resetProximity = () => proximityTargets.forEach(target => {
   target.style.setProperty("--proximity-scale", "1");
   target.style.setProperty("--proximity-glow", "0");
@@ -173,7 +269,6 @@ const runPointerFrame = () => {
   smoothY += (pointerY - smoothY) * .22;
   document.documentElement.style.setProperty("--mx", `${smoothX}px`);
   document.documentElement.style.setProperty("--my", `${smoothY}px`);
-  updateProximity(smoothX, smoothY);
   if (Math.abs(pointerX - smoothX) > .15 || Math.abs(pointerY - smoothY) > .15) {
     pointerFrame = requestAnimationFrame(runPointerFrame);
   } else {
@@ -194,13 +289,9 @@ const proximityObserver = new IntersectionObserver(entries => {
     }
   });
 }, { rootMargin: "80px 0px", threshold: .1 });
-proximityTargets.forEach(target => proximityObserver.observe(target));
-
-if (motionEnabled && proximityTargets.length) {
-  window.addEventListener("resize", () => {
-    markProximityMeasurementsDirty();
-  }, { passive: true });
-  subscribeScroll(markProximityMeasurementsDirty);
+const initPointerDecorations = () => {
+  if (pointerDecorationsReady || !motionEnabled || !proximityTargets.length) return;
+  pointerDecorationsReady = true;
   document.addEventListener("pointermove", event => {
     pointerX = event.clientX;
     pointerY = event.clientY;
@@ -211,47 +302,45 @@ if (motionEnabled && proximityTargets.length) {
     }
     if (!pointerFrame) pointerFrame = requestAnimationFrame(runPointerFrame);
   }, { passive: true });
-  document.addEventListener("pointerleave", () => {
-    resetProximity();
-    activeHeadingChars.forEach(char => {
-      char.style.setProperty("--vp-x", "1");
-      char.classList.remove("is-near");
-    });
-  });
-}
+};
 
-if (motionEnabled) qsa(".magnetic").forEach(button => {
-  let magneticFrame = 0;
-  let magneticX = 0;
-  let magneticY = 0;
-  let magneticRect = null;
-  let renderedX = 0;
-  let renderedY = 0;
-  const cacheMagneticRect = () => {
-    magneticRect = button.getBoundingClientRect();
-  };
-  button.addEventListener("pointerenter", cacheMagneticRect, { passive: true });
-  button.addEventListener("pointermove", event => {
-    const rect = magneticRect || button.getBoundingClientRect();
-    magneticX = (event.clientX - rect.left - rect.width / 2) * .1;
-    magneticY = (event.clientY - rect.top - rect.height / 2) * .1;
-    if (magneticFrame) return;
-    magneticFrame = requestAnimationFrame(() => {
-      if (Math.abs(magneticX - renderedX) > .1 || Math.abs(magneticY - renderedY) > .1) {
-        renderedX = magneticX;
-        renderedY = magneticY;
-        setTranslateVars(button, renderedX, renderedY);
-      }
-      magneticFrame = 0;
+const initMagneticButtons = () => {
+  if (!motionEnabled) return;
+  qsa(".magnetic").forEach(button => {
+    if (button.dataset.magneticBound === "true") return;
+    button.dataset.magneticBound = "true";
+    let magneticFrame = 0;
+    let magneticX = 0;
+    let magneticY = 0;
+    let magneticRect = null;
+    let renderedX = 0;
+    let renderedY = 0;
+    const cacheMagneticRect = () => {
+      magneticRect = button.getBoundingClientRect();
+    };
+    button.addEventListener("pointerenter", cacheMagneticRect, { passive: true });
+    button.addEventListener("pointermove", event => {
+      const rect = magneticRect || button.getBoundingClientRect();
+      magneticX = (event.clientX - rect.left - rect.width / 2) * .1;
+      magneticY = (event.clientY - rect.top - rect.height / 2) * .1;
+      if (magneticFrame) return;
+      magneticFrame = requestAnimationFrame(() => {
+        if (Math.abs(magneticX - renderedX) > .1 || Math.abs(magneticY - renderedY) > .1) {
+          renderedX = magneticX;
+          renderedY = magneticY;
+          setTranslateVars(button, renderedX, renderedY);
+        }
+        magneticFrame = 0;
+      });
+    }, { passive: true });
+    button.addEventListener("pointerleave", () => {
+      magneticRect = null;
+      renderedX = 0;
+      renderedY = 0;
+      setTranslateVars(button, 0, 0);
     });
-  }, { passive: true });
-  button.addEventListener("pointerleave", () => {
-    magneticRect = null;
-    renderedX = 0;
-    renderedY = 0;
-    setTranslateVars(button, 0, 0);
   });
-});
+};
 
 const observer = new IntersectionObserver(entries => {
   entries.forEach(entry => {
@@ -266,11 +355,37 @@ qsa(".reveal").forEach((element, index) => {
 });
 
 const scrambleCharacters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-const scrambleElement = element => {
-  if (reducedMotion || element.dataset.scrambled === "true") return;
+const scrambleQueue = [];
+let scrambleActive = false;
+const runQueuedScrambles = () => {
+  if (scrambleActive || !scrambleQueue.length) return;
+  scrambleActive = true;
+  const element = scrambleQueue.shift();
+  scrambleElement(element, () => {
+    scrambleActive = false;
+    runQueuedScrambles();
+  });
+};
+const queueScrambleElement = element => {
+  if (element.dataset.scrambled === "true" || element.dataset.scrambleQueued === "true") return;
+  element.dataset.scrambleQueued = "true";
+  scrambleQueue.push(element);
+  runQueuedScrambles();
+};
+const scrambleElement = (element, done = () => {}) => {
+  if (reducedMotion || element.dataset.scrambled === "true") {
+    element.dataset.scrambleQueued = "false";
+    done();
+    return;
+  }
   const original = element.textContent.trim();
-  if (!original) return;
+  if (!original) {
+    element.dataset.scrambleQueued = "false";
+    done();
+    return;
+  }
   element.dataset.scrambled = "true";
+  element.dataset.scrambleQueued = "false";
   element.classList.add("scramble-active");
   const start = performance.now();
   const duration = Math.min(760, 280 + original.length * 24);
@@ -294,6 +409,7 @@ const scrambleElement = element => {
     } else {
       element.textContent = original;
       element.classList.remove("scramble-active");
+      done();
     }
   };
 
@@ -301,15 +417,18 @@ const scrambleElement = element => {
 };
 
 const scrambleTargets = qsa(".section-tag, .eyebrow, h2 em, .service-icon, .card-index, .process-step small, .popular").filter(element => !element.closest(".hero"));
-scrambleTargets.forEach(element => element.classList.add("scramble-ready"));
-const scrambleObserver = new IntersectionObserver(entries => {
-  entries.forEach(entry => {
-    if (!entry.isIntersecting) return;
-    scrambleElement(entry.target);
-    scrambleObserver.unobserve(entry.target);
-  });
-}, { threshold: .55 });
-scrambleTargets.forEach(element => scrambleObserver.observe(element));
+const initScrambleEffects = () => {
+  if (!scrambleTargets.length) return;
+  scrambleTargets.forEach(element => element.classList.add("scramble-ready"));
+  const scrambleObserver = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      queueScrambleElement(entry.target);
+      scrambleObserver.unobserve(entry.target);
+    });
+  }, { threshold: .55 });
+  scrambleTargets.forEach(element => scrambleObserver.observe(element));
+};
 
 const scrambleToText = (element, nextText) => {
   if (reducedMotion) {
@@ -371,31 +490,46 @@ qsa(".rotating-word").forEach(word => {
   rotationObserver.observe(word);
 });
 
-if (motionEnabled) qsa(".service-card, .price-card").forEach(card => {
-  let cardFrame = 0;
-  let cardX = 0;
-  let cardY = 0;
-  let cardRect = null;
-  card.addEventListener("pointerenter", () => {
-    cardRect = card.getBoundingClientRect();
-  }, { passive: true });
-  card.addEventListener("pointermove", event => {
-    const rect = cardRect || card.getBoundingClientRect();
-    cardX = event.clientX - rect.left;
-    cardY = event.clientY - rect.top;
-    if (cardFrame) return;
-    cardFrame = requestAnimationFrame(() => {
-      card.style.setProperty("--card-x", `${cardX}px`);
-      card.style.setProperty("--card-y", `${cardY}px`);
-      cardFrame = 0;
+const initInteractiveCards = () => {
+  if (!motionEnabled) return;
+  qsa(".service-card, .price-card").forEach(card => {
+    if (card.dataset.cardGlowBound === "true") return;
+    card.dataset.cardGlowBound = "true";
+    let cardFrame = 0;
+    let cardX = 0;
+    let cardY = 0;
+    let cardRect = null;
+    card.addEventListener("pointerenter", () => {
+      cardRect = card.getBoundingClientRect();
+    }, { passive: true });
+    card.addEventListener("pointermove", event => {
+      const rect = cardRect || card.getBoundingClientRect();
+      cardX = event.clientX - rect.left;
+      cardY = event.clientY - rect.top;
+      if (cardFrame) return;
+      cardFrame = requestAnimationFrame(() => {
+        card.style.setProperty("--card-x", `${cardX}px`);
+        card.style.setProperty("--card-y", `${cardY}px`);
+        cardFrame = 0;
+      });
+    }, { passive: true });
+    card.addEventListener("pointerleave", () => {
+      cardRect = null;
+      card.style.setProperty("--card-x", "50%");
+      card.style.setProperty("--card-y", card.classList.contains("price-card") ? "20%" : "50%");
     });
-  }, { passive: true });
-  card.addEventListener("pointerleave", () => {
-    cardRect = null;
-    card.style.setProperty("--card-x", "50%");
-    card.style.setProperty("--card-y", card.classList.contains("price-card") ? "20%" : "50%");
   });
-});
+};
+
+if (motionEnabled) {
+  const bootPointerEffects = () => {
+    initPointerDecorations();
+    initMagneticButtons();
+    initInteractiveCards();
+  };
+  window.addEventListener("pointermove", bootPointerEffects, { passive: true, once: true });
+  window.addEventListener("pointerdown", bootPointerEffects, { passive: true, once: true });
+}
 
 const heroVisual = qs(".hero-visual");
 let scrollFrame = 0;
@@ -409,21 +543,25 @@ const updateHeroParallax = () => {
 };
 if (motionEnabled && heroVisual) subscribeScroll(updateHeroParallax);
 
-const counterObserver = new IntersectionObserver(entries => {
-  entries.forEach(entry => {
-    if (!entry.isIntersecting) return;
-    const target = Number(entry.target.dataset.count);
-    const start = performance.now();
-    const animate = time => {
-      const progress = Math.min((time - start) / 1300, 1);
-      entry.target.textContent = Math.floor(target * (1 - Math.pow(1 - progress, 3)));
-      if (progress < 1) requestAnimationFrame(animate);
-    };
-    requestAnimationFrame(animate);
-    counterObserver.unobserve(entry.target);
-  });
-}, { threshold: .6 });
-qsa("[data-count]").forEach(counter => counterObserver.observe(counter));
+const initCounterAnimations = () => {
+  const counters = qsa("[data-count]");
+  if (!counters.length) return;
+  const counterObserver = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const target = Number(entry.target.dataset.count);
+      const start = performance.now();
+      const animate = time => {
+        const progress = Math.min((time - start) / 1300, 1);
+        entry.target.textContent = Math.floor(target * (1 - Math.pow(1 - progress, 3)));
+        if (progress < 1) requestAnimationFrame(animate);
+      };
+      requestAnimationFrame(animate);
+      counterObserver.unobserve(entry.target);
+    });
+  }, { threshold: .6 });
+  counters.forEach(counter => counterObserver.observe(counter));
+};
 
 const timeline = qs(".timeline");
 const timelineObserver = new IntersectionObserver(entries => {
@@ -441,8 +579,8 @@ const openService = key => {
     <p>${service.description}</p>
     <div class="modal-meta"><div><span>Typical timeline</span><strong>${service.timeline}</strong></div><div><span>Starting at</span><strong>${service.price}</strong></div></div>
     <ul>${service.deliverables.map(item => `<li>${item}</li>`).join("")}</ul>
-    <a class="button button-primary" href="#contact"><span>Get a free consultation</span><b>&nearr;</b></a>`;
-  qs('a[href="#contact"]', modalContent).addEventListener("click", () => serviceModal.close());
+    <a class="button button-primary" href="${toWhatsAppLink(whatsappMessages.services[key])}" target="_blank" rel="noreferrer noopener"><span>Get a free consultation</span><b>&nearr;</b></a>`;
+  qs(".button", modalContent).addEventListener("click", () => serviceModal.close());
   lenis?.stop();
   serviceModal.showModal();
 };
@@ -465,50 +603,60 @@ const lightboxDescription = qs(".lightbox-copy p");
 const lightboxAction = qs(".lightbox-action");
 const lightboxActionLabel = qs(".lightbox-action span");
 const downloadPanelTitle = qs(".project-download-panel strong");
-const collageCards = qsa(".project-collage a");
+const downloadPanelDescription = qs(".project-download-panel p");
+const collageWrapper = qs(".project-collage");
 const projectArtClasses = ["art-one", "art-two", "art-three", "art-four"];
-qsa(".project").forEach(project => project.addEventListener("click", () => {
-  lightboxTitle.textContent = project.dataset.project;
-  lightboxDescription.textContent = project.dataset.description;
-  const mode = project.dataset.mode || "website";
-  const collageItems = (project.dataset.collage || "").split(",").map(item => item.trim()).filter(Boolean);
-  const collageLinks = (project.dataset.collageLinks || "").split(",").map(item => item.trim()).filter(Boolean);
-  collageCards.forEach((card, index) => {
-    const target = collageLinks[index] ? qs(collageLinks[index]) : null;
-    const media = qs(".project-collage-media", card);
-    qs("strong", card).textContent = collageItems[index] || `Project ${String(index + 1).padStart(2, "0")}`;
-    card.href = target?.dataset.link || "#";
-    card.target = target?.dataset.link ? "_blank" : "_self";
-    card.rel = target?.dataset.link ? "noreferrer noopener" : "";
-    media.style.backgroundImage = target?.dataset.image ? `url("${target.dataset.image}")` : "";
-  });
-  lightboxArt.classList.toggle("has-collage", mode === "website");
-  lightboxArt.classList.toggle("is-download", mode === "download");
-  if (mode === "download") {
-    const downloadPath = project.dataset.download || "";
-    if (downloadPath) {
-      lightboxAction.href = downloadPath;
-      lightboxAction.setAttribute("download", "");
-      lightboxAction.removeAttribute("aria-disabled");
-    } else {
-      lightboxAction.removeAttribute("href");
-      lightboxAction.removeAttribute("download");
-      lightboxAction.setAttribute("aria-disabled", "true");
-    }
-    lightboxActionLabel.textContent = project.dataset.downloadLabel || "Download Portfolio";
-    downloadPanelTitle.textContent = project.dataset.project;
-  } else {
-    lightboxAction.href = "#contact";
+const renderProjectCollage = items => {
+  collageWrapper.innerHTML = items.map(item => `
+    <a href="${item.href}" target="_blank" rel="noreferrer noopener">
+      <span>${item.number}</span>
+      <div class="project-collage-media" style="background-image:url('${item.image}')"></div>
+      <strong>${item.title}</strong>
+    </a>`).join("");
+};
+const openProject = (projectKey, artClass = "art-one") => {
+  const project = portfolioProjects[projectKey];
+  if (!project) return;
+  lightboxTitle.textContent = project.title;
+  lightboxDescription.textContent = project.description;
+  const websiteMode = project.mode === "website";
+  lightboxArt.classList.toggle("has-collage", websiteMode);
+  lightboxArt.classList.toggle("is-download", !websiteMode);
+
+  if (websiteMode) {
+    renderProjectCollage(project.collage);
+    lightboxAction.href = toWhatsAppLink(whatsappMessages.websiteProject);
     lightboxAction.removeAttribute("download");
+    lightboxAction.setAttribute("target", "_blank");
+    lightboxAction.setAttribute("rel", "noreferrer noopener");
     lightboxAction.removeAttribute("aria-disabled");
-    lightboxActionLabel.textContent = "Build something like this";
+    lightboxActionLabel.textContent = project.actionLabel || "Build something like this";
     downloadPanelTitle.textContent = "";
+    downloadPanelDescription.textContent = "";
+  } else {
+    collageWrapper.innerHTML = "";
+    lightboxAction.href = project.actionHref || "";
+    lightboxActionLabel.textContent = project.actionLabel || "Open Portfolio";
+    lightboxAction.removeAttribute("aria-disabled");
+    if (project.actionType === "download") {
+      lightboxAction.setAttribute("download", "");
+      lightboxAction.removeAttribute("target");
+      lightboxAction.removeAttribute("rel");
+    } else {
+      lightboxAction.removeAttribute("download");
+      lightboxAction.setAttribute("target", "_blank");
+      lightboxAction.setAttribute("rel", "noreferrer noopener");
+    }
+    downloadPanelTitle.textContent = project.title;
+    downloadPanelDescription.textContent = project.description;
   }
+
   lightboxArt.classList.remove(...projectArtClasses);
-  lightboxArt.classList.add(project.dataset.art || "art-one");
+  lightboxArt.classList.add(artClass);
   lenis?.stop();
   lightbox.showModal();
-}));
+};
+qsa(".project").forEach(project => project.addEventListener("click", () => openProject(project.dataset.projectKey, project.dataset.art || "art-one")));
 qs(".lightbox .modal-close").addEventListener("click", () => lightbox.close());
 lightboxAction.addEventListener("click", event => {
   if (lightboxAction.getAttribute("aria-disabled") === "true") {
@@ -549,14 +697,17 @@ const runTestimonials = time => {
   }
   testimonialFrame = requestAnimationFrame(runTestimonials);
 };
-const testimonialObserver = new IntersectionObserver(entries => {
-  testimonialsActive = entries[0].isIntersecting;
-  if (testimonialsActive && !testimonialFrame) testimonialFrame = requestAnimationFrame(runTestimonials);
-}, { threshold: .25 });
-if (testimonials.length) testimonialObserver.observe(testimonials[0].parentElement);
-document.addEventListener("visibilitychange", () => {
-  if (!document.hidden && testimonialsActive && !testimonialFrame) testimonialFrame = requestAnimationFrame(runTestimonials);
-});
+const initTestimonialRotation = () => {
+  if (!testimonials.length) return;
+  const testimonialObserver = new IntersectionObserver(entries => {
+    testimonialsActive = entries[0].isIntersecting;
+    if (testimonialsActive && !testimonialFrame) testimonialFrame = requestAnimationFrame(runTestimonials);
+  }, { threshold: .25 });
+  testimonialObserver.observe(testimonials[0].parentElement);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && testimonialsActive && !testimonialFrame) testimonialFrame = requestAnimationFrame(runTestimonials);
+  });
+};
 
 const pricingToggle = qs(".pricing-toggle button");
 const pricingLabels = qsa(".toggle-label");
@@ -581,7 +732,11 @@ const renderPricing = (mode, animate = true) => {
       qs("h3", card).innerHTML = plan.price;
       qs("p", card).textContent = plan.description;
       qs("ul", card).innerHTML = plan.features.map(feature => `<li>${feature}</li>`).join("");
+      const ctaButton = qs(".button", card);
       qs(".button span", card).textContent = plan.cta;
+      ctaButton.href = toWhatsAppLink(whatsappMessages.pricing[mode][card.dataset.plan]);
+      ctaButton.target = "_blank";
+      ctaButton.rel = "noreferrer noopener";
       card.classList.remove("switching");
     };
 

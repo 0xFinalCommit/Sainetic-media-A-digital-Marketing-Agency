@@ -4,8 +4,30 @@ const setTranslateVars = (element, x, y) => {
   element.style.setProperty("--magnetic-x", `${x}px`);
   element.style.setProperty("--magnetic-y", `${y}px`);
 };
+const whatsappNumber = "917878063531";
+const toWhatsAppLink = message => `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+const wireWhatsAppLinks = (root = document) => {
+  qsa("[data-wa-message]", root).forEach(link => {
+    link.href = toWhatsAppLink(link.dataset.waMessage);
+    link.target = "_blank";
+    link.rel = "noreferrer noopener";
+  });
+};
+const scheduleDeferred = callback => {
+  if ("requestIdleCallback" in window) {
+    window.requestIdleCallback(() => callback(), { timeout: 900 });
+    return;
+  }
+  window.setTimeout(callback, 240);
+};
 
-window.addEventListener("load", () => window.setTimeout(() => qs(".page-loader")?.classList.add("loaded"), 350));
+window.addEventListener("load", () => {
+  window.setTimeout(() => qs(".page-loader")?.classList.add("loaded"), 350);
+  wireWhatsAppLinks();
+  scheduleDeferred(() => {
+    initScrambleEffects();
+  });
+}, { once: true });
 
 const themeToggle = qs(".theme-toggle");
 const themeColor = qs('meta[name="theme-color"]');
@@ -50,6 +72,7 @@ const subscribeScroll = callback => {
 };
 qsa(".section-tag, .eyebrow, .detail-number").forEach(element => element.classList.add("proximity-target"));
 const proximityTargets = qsa(".proximity-word, .proximity-target");
+const proximityHeadings = qsa("h1, .detail-main h2, .contact h2");
 const activeProximityTargets = new Set();
 const proximityTargetCenters = new WeakMap();
 let activeHeading = null;
@@ -61,6 +84,7 @@ let pointerY = 0;
 let smoothX = 0;
 let smoothY = 0;
 let pointerReady = false;
+let pointerDecorationsReady = false;
 let proximityMeasurementsDirty = true;
 const wrapHeadingLetters = heading => {
   const wrapNode = node => {
@@ -83,8 +107,13 @@ const wrapHeadingLetters = heading => {
   heading.classList.add("vp-heading");
   wrapNode(heading);
 };
-qsa("h1, .detail-main h2, .contact h2").forEach(wrapHeadingLetters);
+const ensureHeadingWrapped = heading => {
+  if (heading.dataset.vpWrapped === "true") return;
+  wrapHeadingLetters(heading);
+  heading.dataset.vpWrapped = "true";
+};
 const cacheHeadingCenters = heading => {
+  ensureHeadingWrapped(heading);
   activeHeading = heading;
   activeHeadingChars = qsa(".vp-char", heading);
   activeHeadingCenters = activeHeadingChars.map(char => {
@@ -104,7 +133,9 @@ const refreshProximityMeasurements = () => {
 const markProximityMeasurementsDirty = () => {
   proximityMeasurementsDirty = true;
 };
-qsa(".vp-heading").forEach(heading => {
+const bindHeadingProximity = heading => {
+  if (heading.dataset.vpBound === "true") return;
+  heading.dataset.vpBound = "true";
   heading.addEventListener("pointerenter", () => cacheHeadingCenters(heading), { passive: true });
   heading.addEventListener("pointerleave", () => {
     activeHeadingChars.forEach(char => {
@@ -115,7 +146,7 @@ qsa(".vp-heading").forEach(heading => {
     activeHeadingChars = [];
     activeHeadingCenters = [];
   }, { passive: true });
-});
+};
 const resetProximity = () => proximityTargets.forEach(target => {
   target.style.setProperty("--proximity-scale", "1");
   target.style.setProperty("--proximity-glow", "0");
@@ -146,7 +177,6 @@ const runPointerFrame = () => {
   smoothY += (pointerY - smoothY) * .22;
   document.documentElement.style.setProperty("--mx", `${smoothX}px`);
   document.documentElement.style.setProperty("--my", `${smoothY}px`);
-  updateProximity(smoothX, smoothY);
   if (Math.abs(pointerX - smoothX) > .15 || Math.abs(pointerY - smoothY) > .15) {
     pointerFrame = requestAnimationFrame(runPointerFrame);
   } else {
@@ -167,13 +197,9 @@ const proximityObserver = new IntersectionObserver(entries => {
     }
   });
 }, { rootMargin: "80px 0px", threshold: .1 });
-proximityTargets.forEach(target => proximityObserver.observe(target));
-
-if (motionEnabled && proximityTargets.length) {
-  window.addEventListener("resize", () => {
-    markProximityMeasurementsDirty();
-  }, { passive: true });
-  subscribeScroll(markProximityMeasurementsDirty);
+const initPointerDecorations = () => {
+  if (pointerDecorationsReady || !motionEnabled || !proximityTargets.length) return;
+  pointerDecorationsReady = true;
   document.addEventListener("pointermove", event => {
     pointerX = event.clientX;
     pointerY = event.clientY;
@@ -184,47 +210,45 @@ if (motionEnabled && proximityTargets.length) {
     }
     if (!pointerFrame) pointerFrame = requestAnimationFrame(runPointerFrame);
   }, { passive: true });
-  document.addEventListener("pointerleave", () => {
-    resetProximity();
-    activeHeadingChars.forEach(char => {
-      char.style.setProperty("--vp-x", "1");
-      char.classList.remove("is-near");
-    });
-  });
-}
+};
 
-if (motionEnabled) qsa(".magnetic").forEach(button => {
-  let magneticFrame = 0;
-  let magneticX = 0;
-  let magneticY = 0;
-  let magneticRect = null;
-  let renderedX = 0;
-  let renderedY = 0;
-  const cacheMagneticRect = () => {
-    magneticRect = button.getBoundingClientRect();
-  };
-  button.addEventListener("pointerenter", cacheMagneticRect, { passive: true });
-  button.addEventListener("pointermove", event => {
-    const rect = magneticRect || button.getBoundingClientRect();
-    magneticX = (event.clientX - rect.left - rect.width / 2) * .1;
-    magneticY = (event.clientY - rect.top - rect.height / 2) * .1;
-    if (magneticFrame) return;
-    magneticFrame = requestAnimationFrame(() => {
-      if (Math.abs(magneticX - renderedX) > .1 || Math.abs(magneticY - renderedY) > .1) {
-        renderedX = magneticX;
-        renderedY = magneticY;
-        setTranslateVars(button, renderedX, renderedY);
-      }
-      magneticFrame = 0;
+const initMagneticButtons = () => {
+  if (!motionEnabled) return;
+  qsa(".magnetic").forEach(button => {
+    if (button.dataset.magneticBound === "true") return;
+    button.dataset.magneticBound = "true";
+    let magneticFrame = 0;
+    let magneticX = 0;
+    let magneticY = 0;
+    let magneticRect = null;
+    let renderedX = 0;
+    let renderedY = 0;
+    const cacheMagneticRect = () => {
+      magneticRect = button.getBoundingClientRect();
+    };
+    button.addEventListener("pointerenter", cacheMagneticRect, { passive: true });
+    button.addEventListener("pointermove", event => {
+      const rect = magneticRect || button.getBoundingClientRect();
+      magneticX = (event.clientX - rect.left - rect.width / 2) * .1;
+      magneticY = (event.clientY - rect.top - rect.height / 2) * .1;
+      if (magneticFrame) return;
+      magneticFrame = requestAnimationFrame(() => {
+        if (Math.abs(magneticX - renderedX) > .1 || Math.abs(magneticY - renderedY) > .1) {
+          renderedX = magneticX;
+          renderedY = magneticY;
+          setTranslateVars(button, renderedX, renderedY);
+        }
+        magneticFrame = 0;
+      });
+    }, { passive: true });
+    button.addEventListener("pointerleave", () => {
+      magneticRect = null;
+      renderedX = 0;
+      renderedY = 0;
+      setTranslateVars(button, 0, 0);
     });
-  }, { passive: true });
-  button.addEventListener("pointerleave", () => {
-    magneticRect = null;
-    renderedX = 0;
-    renderedY = 0;
-    setTranslateVars(button, 0, 0);
   });
-});
+};
 
 const observer = new IntersectionObserver(entries => entries.forEach(entry => {
   if (!entry.isIntersecting) return;
@@ -236,12 +260,47 @@ qsa(".reveal").forEach((element, index) => {
   observer.observe(element);
 });
 
+if (motionEnabled) {
+  const bootPointerEffects = () => {
+    initPointerDecorations();
+    initMagneticButtons();
+  };
+  window.addEventListener("pointermove", bootPointerEffects, { passive: true, once: true });
+  window.addEventListener("pointerdown", bootPointerEffects, { passive: true, once: true });
+}
+
 const scrambleCharacters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-const scrambleElement = element => {
-  if (reducedMotion || element.dataset.scrambled === "true") return;
+const scrambleQueue = [];
+let scrambleActive = false;
+const runQueuedScrambles = () => {
+  if (scrambleActive || !scrambleQueue.length) return;
+  scrambleActive = true;
+  const element = scrambleQueue.shift();
+  scrambleElement(element, () => {
+    scrambleActive = false;
+    runQueuedScrambles();
+  });
+};
+const queueScrambleElement = element => {
+  if (element.dataset.scrambled === "true" || element.dataset.scrambleQueued === "true") return;
+  element.dataset.scrambleQueued = "true";
+  scrambleQueue.push(element);
+  runQueuedScrambles();
+};
+const scrambleElement = (element, done = () => {}) => {
+  if (reducedMotion || element.dataset.scrambled === "true") {
+    element.dataset.scrambleQueued = "false";
+    done();
+    return;
+  }
   const original = element.textContent.trim();
-  if (!original) return;
+  if (!original) {
+    element.dataset.scrambleQueued = "false";
+    done();
+    return;
+  }
   element.dataset.scrambled = "true";
+  element.dataset.scrambleQueued = "false";
   element.classList.add("scramble-active");
   const start = performance.now();
   const duration = Math.min(760, 280 + original.length * 24);
@@ -265,6 +324,7 @@ const scrambleElement = element => {
     } else {
       element.textContent = original;
       element.classList.remove("scramble-active");
+      done();
     }
   };
 
@@ -272,15 +332,18 @@ const scrambleElement = element => {
 };
 
 const scrambleTargets = qsa(".section-tag, .eyebrow, h2 em, .detail-number, .proof-grid span").filter(element => !element.closest(".services-hero"));
-scrambleTargets.forEach(element => element.classList.add("scramble-ready"));
-const scrambleObserver = new IntersectionObserver(entries => {
-  entries.forEach(entry => {
-    if (!entry.isIntersecting) return;
-    scrambleElement(entry.target);
-    scrambleObserver.unobserve(entry.target);
-  });
-}, { threshold: .55 });
-scrambleTargets.forEach(element => scrambleObserver.observe(element));
+const initScrambleEffects = () => {
+  if (!scrambleTargets.length) return;
+  scrambleTargets.forEach(element => element.classList.add("scramble-ready"));
+  const scrambleObserver = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      queueScrambleElement(entry.target);
+      scrambleObserver.unobserve(entry.target);
+    });
+  }, { threshold: .55 });
+  scrambleTargets.forEach(element => scrambleObserver.observe(element));
+};
 
 const scrambleToText = (element, nextText) => {
   if (reducedMotion) {
